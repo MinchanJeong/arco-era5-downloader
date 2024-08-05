@@ -1,0 +1,18 @@
+paths:
+  gcsfs_path: gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3
+  zarr_path:  /data/minchan/GC_ERA5_0729
+  zarr_name:  _test.zarr
+  repo_path: /home/user/load_ngcm_data
+  output_path:  /home/user/load_ngcm_data/logs
+
+dask:
+  dask_delay: True
+
+# For debugging
+start_date: 2019-12-31 00:00:00
+end_date: 2020-01-06 00:00:00 
+timestep_hour: 6
+
+shift_forcing: 0
+variables: ['2m_temperature','temperature']
+forcing_variables: ['sea_ice_cover', 'sea_surface_temperature']

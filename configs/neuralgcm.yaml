@@ -1,0 +1,20 @@
+paths:
+  zarr_name: NGCM_ERA5.zarr
+
+timestep_hour: 6
+shift_forcing: 24
+
+variables: [
+    'geopotential',
+    'specific_humidity',
+    'temperature',
+    'u_component_of_wind',
+    'v_component_of_wind',
+    'specific_cloud_ice_water_content',
+    'specific_cloud_liquid_water_content',
+]
+
+forcing_variables: [
+    'sea_ice_cover',
+    'sea_surface_temperature'
+]

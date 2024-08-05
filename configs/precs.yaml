@@ -1,0 +1,17 @@
+paths:
+  zarr_name:  PREC_1h_ERA5.zarr
+
+timestep_hour: 1
+shift_forcing: 0
+
+variables: [
+    'convective_rain_rate',
+    'large_scale_rain_rate',
+    'total_column_rain_water',
+    'convective_snowfall',
+    'convective_snowfall_rate_water_equivalent',
+    'large_scale_snowfall',
+    'large_scale_snowfall_rate_water_equivalent',
+    'total_precipitation'
+]
+precipitation_variables: []
