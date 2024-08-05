@@ -41,13 +41,6 @@ def get_configs(base_config_name):
     else:
         config = base_config
 
-    # Set device
-    if args.device:
-        config['device'] = args.device
-    
-    config['data'] = config.get('data', {})
-    config['data']['train_total'] = args.train_total or config.get('data', {}).get('train_total', False)
-
     return config
 
 def set_seed(seed):

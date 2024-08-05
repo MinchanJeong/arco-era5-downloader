@@ -15,7 +15,7 @@ log_path = utils.set_output_path(config)
 logger = utils.get_logger('load_era5', log_path, add_stream_handler=True)
 logger.info(f"\nConfiguration: {config}\n")
 
-from xarray_utils import selective_temporal_shift
+from xarray_utils import selective_temporal_shift, variable_time_aggregation
 
 class DaskManager:
     def __init__(self, dask_delay=False):
@@ -52,7 +52,8 @@ class ERA5Downloader:
         self.shift_forcing      = int(config['shift_forcing'])
         self.input_variables   = list(config['variables'])
         self.forcing_variables = list(config['forcing_variables'])
-        self.target_variables = self.input_variables + self.forcing_variables
+        self.agg6h_variables = list(config['agg6h_variables'])
+        self.target_variables = self.input_variables + self.forcing_variables + self.agg6h_variables
         self.sliced_era5 = self._set_era5_dataset()
 
         self.zarr_file_path = Path(config_paths['zarr_path'], config_paths['zarr_name'])
@@ -71,6 +72,17 @@ class ERA5Downloader:
 
     def _set_era5_dataset(self):
         sliced_era5 = self.full_era5[self.target_variables]
+        # make empty variable for agg6h_variables for same time dim. name: var_name+'_6hr'
+        for var in self.agg6h_variables:
+            sliced_era5[f'{var}_6hr'] = xr.zeros_like(sliced_era5[var].isel(time=0)) 
+            # timedim? : sliced_era5[var].dims[0]
+
+
+        # slicing and chunking
+        
+
+        # as dask array
+        sliced_era5 = sliced_era5.chunk({'time': 1, 'latitude': -1, 'longitude': -1, 'level': -1})
 
         if self.shift_forcing > 0 and len(self.forcing_variables) > 0:
             sliced_era5 = sliced_era5.pipe(
@@ -78,11 +90,19 @@ class ERA5Downloader:
                 variables=self.forcing_variables,
                 time_shift=f'{self.shift_forcing} hours',
             )
+            
+        if len(self.agg6h_variables) > 0:
+            sliced_era5 = sliced_era5.pipe(
+                variable_time_aggregation,
+                variables=self.agg6h_variables,
+                target_times=self.total_times,
+                min_period_h='1 hour',
+                agg_h='6 hour',
+            )
 
         sliced_era5 = (
             sliced_era5
             .sel(time=self.total_times)
-            .chunk({'time': 1, 'latitude': -1, 'longitude': -1, 'level': -1})
         )
 
         return sliced_era5

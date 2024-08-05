@@ -50,3 +50,42 @@ def selective_temporal_shift(
     for var in variables:
       ds[var] = dataset.variables[var].isel({time_name: slice(-shift, None)})
   return ds
+
+def variable_time_aggregation(
+    dataset: xarray.Dataset,
+    variables: Sequence[str] = tuple(),
+    target_times: Sequence[str] = tuple(),
+    min_period_h: str | np.timedelta64 | pd.Timedelta = '1 hour',
+    agg_h: str | np.timedelta64 | pd.Timedelta = '6 hour',
+    time_name: str = 'time') -> xarray.Dataset:
+  """Aggregates specified variables in time.
+  make new variable name var_name+'_agg_h' with summation over min_period_h
+  Args:
+    dataset: Input dataset.
+    variables: Variables to which aggregation is applied.
+    target_times: Target times to which the aggregation is applied.
+    min_period_h: Minimum period for aggregation.
+    agg_h: Aggregation period.
+    time_name: Name of the time coordinate.
+  Returns:
+    Dataset where every DataArray in `variables` have been aggregated on the
+    `time_name` coordinate by `agg_h`. nan in other than target_times
+  """
+
+  min_period = pd.Timedelta(min_period_h)
+  agg = pd.Timedelta(agg_h)
+  target_times = pd.to_datetime(target_times)
+
+  if not variables:
+    return dataset
+
+  ds = dataset.copy()  # 원본 데이터셋 보호
+  for var in variables:
+    print('var:', var)
+    rolling_sum = dataset[var].rolling(
+        {time_name: int(agg / min_period)}, min_periods=int(agg / min_period)
+    ).sum()
+    print('aaa')
+    ds[var + f'_{int(agg / pd.Timedelta('1h'))}hr'] = rolling_sum.sel({time_name: target_times})
+    print('bbb')
+  return ds
