@@ -14,3 +14,7 @@ Personal ERA5 Downloader
 ### ERA5
 - https://github.com/google-research/arco-era5
 - https://cloud.google.com/storage/docs/public-datasets/era5
+
+
+### Further Development
+- Study cloud optimization strategy
