@@ -1,11 +1,13 @@
 import sys
 import pandas as pd
 from pathlib import Path
+import logging
 
 import xarray as xr
 import dask
 import dask.array as da
 import gcsfs
+import zarr
 
 import utils
 global config
@@ -18,20 +20,40 @@ logger.info(f"\nConfiguration: {config}\n")
 from xarray_utils import selective_temporal_shift
 
 class DaskManager:
-    def __init__(self, dask_delay=False):
+    def __init__(self, zarr_file_path, sliced_era5, total_times, use_dask_func=False, dask_delay=False):
         self.dask_delay = dask_delay
         self.delayed_tasks = []
+        self.zarr_file_path = zarr_file_path
+        self.sliced_era5 = sliced_era5
+        self.total_times = total_times
+        
+        if use_dask_func:
+            self.process_to_zarr = self.process_to_zarr_by_dask
+        else:
+            self.process_to_zarr = self.process_to_zarr_by_xarray
 
-    def process_to_zarr(self, da_object, **kwargs):
-        arg_compute = kwargs.get('compute', True)
-        assert not (arg_compute and self.dask_delay), "compute=True and dask_delay=True are not compatible"
+    def process_to_zarr_by_xarray(self, var, region_base):
+        for time_idx, time in enumerate(self.total_times):
+            if time_idx == 0: continue
+            region = region_base.copy()
+            region['time'] = slice(time_idx, time_idx+1)
+            nullspace = xr.open_zarr(self.zarr_file_path, consolidated=True).isnull()
+            if nullspace[var].sel(time=[time], drop=False).any():
+                dask_delay = self.sliced_era5[var].sel(time=[time], drop=False).to_zarr(self.zarr_file_path, mode='r+', consolidated=True, compute=False, region=region)
+            
+                if self.dask_delay:
+                    self.delayed_tasks.append(dask_delay)
 
-        delayed_task = da.to_zarr(arr=da_object, **kwargs)
+    def process_to_zarr_by_dask(self, var, region_base):
+        delayed_task = da.to_zarr(arr=self.sliced_era5[var].data, \
+                                  url=self.zarr_file_path, component=var, overwrite=True, compute=False, return_stored=False)
         if self.dask_delay:
             self.delayed_tasks.append(delayed_task)
 
     def process_to_zarr_flash(self):
         if self.dask_delay:
+            logger.info("Computing all delayed tasks... Set Logger level to DEBUG for more details")
+            logger.setLevel(logging.DEBUG)
             dask.compute(*self.delayed_tasks)
             self.delayed_tasks = []
             logger.info("All delayed tasks are computed")
@@ -47,8 +69,6 @@ class ERA5Downloader:
         self.timestep_hour = config['timestep_hour']
         self.total_times = self._total_times()
 
-        self.dask_manager = DaskManager(dask_delay=config['dask']['dask_delay'])
-
         self.shift_forcing      = int(config['shift_forcing'])
         self.input_variables   = list(config['variables'])
         self.forcing_variables = list(config['forcing_variables'])
@@ -56,6 +76,7 @@ class ERA5Downloader:
         self.sliced_era5 = self._set_era5_dataset()
 
         self.zarr_file_path = Path(config_paths['zarr_path'], config_paths['zarr_name'])
+        self.dask_manager = DaskManager(self.zarr_file_path, self.sliced_era5, self.total_times, dask_delay=config['dask']['dask_delay'])
     
     def _load_full_era5(self):
         gcs = gcsfs.GCSFileSystem(token='anon')
@@ -103,6 +124,8 @@ class ERA5Downloader:
         logger.info(f"Level values: {self.level_values}")
 
         logger.info(f"Dataset to be downloaded: {self.sliced_era5}")
+        # data size
+        logger.info(f"Data size: {self.sliced_era5.nbytes / 1e9} GB")
 
         print("Proceed? (y/n)")
         proceed = input()
@@ -113,7 +136,8 @@ class ERA5Downloader:
         self._get_dataset_info()
 
         # for saving the metadata
-        self.sliced_era5.to_zarr(self.zarr_file_path, mode='w', consolidated=True, compute=False)
+        if not self.zarr_file_path.exists():
+            self.sliced_era5.to_zarr(self.zarr_file_path, mode='w', consolidated=True, compute=False)
 
         logger.info("Storing sample unit time data for metadata")
         self.sliced_era5.sel(time=[self.start_time], drop=False).to_zarr(
@@ -125,7 +149,14 @@ class ERA5Downloader:
         logger.info("Downloading and storing data variable-by-variable")
         for var in self.target_variables:
             logger.info(f"Tasking {var}...")
-            self.dask_manager.process_to_zarr(self.sliced_era5[var].data, url=self.zarr_file_path, component=var, overwrite=True, compute=False, return_stored=False)
+            if var in self.variables_with_level:
+                region_base = {'latitude': slice(None), 'longitude': slice(None), 'level': slice(None)}
+            else:
+                region_base = {'latitude': slice(None), 'longitude': slice(None)}
+
+            self.dask_manager.process_to_zarr(var, region_base)
+
+            #self.dask_manager.process_to_zarr(self.sliced_era5[var].data, url=self.zarr_file_path, component=var, overwrite=True, compute=False, return_stored=False)
         self.dask_manager.process_to_zarr_flash()
         logger.info("Downloading and storing data done")
 
