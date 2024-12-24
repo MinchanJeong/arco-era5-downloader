@@ -4,7 +4,6 @@ import xarray
 
 from typing import Sequence
 
-
 def selective_temporal_shift(
     dataset: xarray.Dataset,
     variables: Sequence[str] = tuple(),

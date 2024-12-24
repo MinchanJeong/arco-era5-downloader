@@ -1,5 +1,8 @@
-paths:
-  zarr_name: NGCM_ERA5.zarr
+defaults:
+  - base
+  - _self_
+
+zarr_name: NGCM_ERA5.zarr
 
 timestep_hour: 6
 shift_forcing: 24

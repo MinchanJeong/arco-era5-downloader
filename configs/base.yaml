@@ -1,18 +1,35 @@
+gcsfs:
+  object: gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3
+  token: anon
+
 paths:
-  gcsfs_path: gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3
-  zarr_path:  /media/user/h/minchan/GC_ERA5
-  zarr_name:  _test.zarr
-  repo_path:  /home/minchan/arco-era5-downloader
-  output_path:  /home/minchan/arco-era5-downloader/logs
+  zarr_dir:  /media/user/z/minchan/era5/GC_ERA5
+zarr_name:  TEST_BASE.zarr
 
 dask:
   dask_delay: True
+  use_dask_func: True
 
 # For debugging
 start_date: 2024-02-27 00:00:00
 end_date: 2024-03-15 00:00:00 
-timestep_hour: 6
 
+timestep_hour: 6
 shift_forcing: 0
-variables: ['2m_temperature','temperature']
-forcing_variables: ['sea_ice_cover', 'sea_surface_temperature']
+
+variables: [
+    '2m_temperature',
+    'mean_sea_level_pressure',
+    '10m_v_component_of_wind',
+    '10m_u_component_of_wind',
+    'temperature',
+    'geopotential',
+    'u_component_of_wind',
+    'v_component_of_wind',
+    'vertical_velocity',
+    'specific_humidity',
+    'total_precipitation',
+    'geopotential_at_surface',
+]
+
+forcing_variables: ['toa_incident_solar_radiation','land_sea_mask']

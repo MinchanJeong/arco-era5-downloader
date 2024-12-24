@@ -1,6 +1,11 @@
-paths:
-  zarr_name:  GC_ERA5.zarr
+defaults:
+  - base
+  - _self_
 
+zarr_name: GC_ERA5.zarr
+
+start_date: 2018-01-01 00:00:00
+end_date: 2019-01-01 00:00:00 
 timestep_hour: 6
 shift_forcing: 0
 
@@ -16,6 +21,6 @@ variables: [
     'vertical_velocity',
     'specific_humidity',
     'total_precipitation',
-    'geopotential_at_surface',
+    'geopotential_at_surface'
 ]
 forcing_variables: ['toa_incident_solar_radiation','land_sea_mask']

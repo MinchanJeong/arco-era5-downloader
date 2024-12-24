@@ -1,5 +1,8 @@
-paths:
-  zarr_name:  PREC_1h_ERA5.zarr
+defaults:
+  - base
+  - _self_
+  
+zarr_name:  PREC_1h_ERA5.zarr
 
 timestep_hour: 1
 shift_forcing: 0
@@ -14,4 +17,5 @@ variables: [
     'large_scale_snowfall_rate_water_equivalent',
     'total_precipitation'
 ]
-precipitation_variables: []
+
+forcing_variables: ['toa_incident_solar_radiation','land_sea_mask']

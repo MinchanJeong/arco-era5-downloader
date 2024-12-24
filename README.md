@@ -1,6 +1,11 @@
 ### Description
 Personal ERA5 Downloader
 
+### USAGE
+`python3 get_era5.py --config-name=graphcast`
+
+### Requirements
+gcsfs, xarray, zarr, dask
 
 ### Dask Reference
 - https://examples.dask.org/xarray.html
