@@ -1,5 +1,6 @@
 outputs/
 logs/
+**.out
 
 **/*.ipynb_checkpoints/
 __pycache__/
